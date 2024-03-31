@@ -160,6 +160,15 @@ export async function registerUser(name,lastname,mobileno,city , email) {
     }
 }
 
+export async function updateUser(name, lasatname, mobileno, city, userid){
+    await pool.query(
+        `UPDATE users SET name=?, lastname=?, mobile=?, city=? WHERE userID = ?`,
+        [name, lasatname, mobileno, city, userid]
+    );
+
+    return { success: true, message: "User Data Updated Successfully" };
+}
+
 export async function addBook(name,uid,price,status,description,author,image,category){
     const [book] = await pool.query("Insert into booksTable (bookname,author,price,status,uID,description,imagepath,category) Values(?,?,?,?,?,?,?,?)",[name,author,price,status,uid,description,image,category])
 
@@ -167,6 +176,62 @@ export async function addBook(name,uid,price,status,description,author,image,cat
 
     return bookID
 }
+
+export async function updateBook(bid,bookname, userid, price, description, author, imagePath, category) {
+    try {
+
+        await pool.query(
+            `UPDATE booksTable SET bookname=?, uID=?, price=?, description=?, author=?, imagepath=?, category=? WHERE bID = ?`,
+            [bookname, userid, price, description, author, imagePath, category,bid]
+        );
+
+        return { success: true, message: "User Data Updated Successfully" };
+    } catch (error) {
+        console.error('Error updating user data:', error);
+        throw error;
+    }
+}
+
+export async function getUserBooks(userid){
+    try {
+        const [books] = await pool.query("SELECT * FROM booksTable WHERE uID = ?", [userid]);
+        return books;
+      } catch (error) {
+        throw error;
+      }
+}
+
+export async function deleteBook(bid){
+    const [address] = await pool.query('DELETE FROM booksTable WHERE bID = ?', [bid]);
+
+    return true
+}
+
+export async function getCount(){
+    
+    const len = await pool.query(`SELECT *
+    FROM booksTable
+    ORDER BY bID DESC
+    LIMIT 1;`)
+
+    return len[0][0]['bID']
+}
+
+export async function getTableLength(){
+    const len = await pool.query(`SELECT COUNT(*) AS table_length
+    FROM booksTable;
+    `)
+
+    return len[0][0]['table_length']
+}
+
+
+export async function fetctBooks(startId, endId){
+    const query = `SELECT * FROM booksTable WHERE bID <= ? AND bID >= ? ORDER BY bID DESC`;
+    const [books] = await pool.query(query, [startId, endId]);
+    return books;
+}
+
 
 export async function addAddress(country,state,city,pin,near,userid){
     const [address] = await pool.query( 
@@ -179,6 +244,22 @@ export async function addAddress(country,state,city,pin,near,userid){
     return aid
 }
 
+
+export async function updateAddress(aid,country, state, city, pin, near, userid) {
+    try {
+
+        await pool.query(
+            `UPDATE address SET country=?, state=?, city=?, pin=?, location=?, uID=? WHERE aID = ?`,
+            [country, state, city, pin, near, userid,aid]
+        );
+
+        return { success: true, message: "User Data Updated Successfully" };
+    } catch (error) {
+        console.error('Error updating user data:', error);
+        throw error;
+    }
+}
+
 export async function getAddress(userid){
     const [address] = await pool.query("select * from address where uID = (?)",[userid])
   
@@ -186,68 +267,86 @@ export async function getAddress(userid){
     return address
 }
 
-export async function checkOtp(email) {
-    try {
-        const [result] = await pool.query('SELECT otp FROM users WHERE email = ?', [email]);
+export async function deleteAddress(aid){
+    const [address] = await pool.query('DELETE FROM address WHERE aID = ?', [aid]);
 
-        if (result.length === 0) {
-            return null; // OTP not found
-        } else {
-            return result[0].otp;
-        }
+    return true
+}
+
+export async function placeOrder(bookID, aID, userID, paymentID, paymentStatus, status) {
+    const [order] = await pool.query("INSERT INTO orders (bookID, addressID, userID, paymentID, paymentStatus, status) VALUES (?, ?, ?, ?, ?, ?)", [bookID, aID, userID, paymentID, paymentStatus, status]);
+    
+    return order.insertId;
+}
+
+
+export async function getUserOrders(userid) {
+    try {
+      const [orders] = await pool.query(`
+        SELECT 
+          booksTable.bookname,
+          booksTable.author,
+          booksTable.imagepath,
+          booksTable.price,
+          address.country,
+          address.state,
+          address.location,
+          address.city,
+          address.pin,
+          orders.order_date,
+          orders.paymentStatus,
+          orders.paymentID,
+          orders.status
+        FROM 
+          orders
+        JOIN 
+          booksTable ON orders.bookID = booksTable.bID
+        JOIN 
+          address ON orders.addressID = address.aID
+        WHERE 
+          orders.userID = ?`, [userid]);
+  
+      return orders;
     } catch (error) {
-        console.error('Error in verifyOtp function:', error);
+      throw error;
+    }
+  }
+  
+
+  export async function checkItemInCart(bookID, userid) {
+    const [rows] = await pool.query("SELECT * FROM CartItems WHERE bookID = ? AND userID = ?", [bookID, userid]);
+    return rows.length > 0; // If rows exist, return true; otherwise, return false
+}
+
+export async function addtocart(bookID,userid){
+    const [cart] = await pool.query("INSERT INTO CartItems (bookID,userID) VALUES (?, ?)", [bookID, userid]);
+    
+    return cart.insertId;
+}
+
+
+export async function getCartItems(userid) {
+    try {
+        const [cartItems] = await pool.query(`
+            SELECT CI.CartItemID, B.*, CI.userID
+            FROM CartItems CI
+            JOIN booksTable B ON CI.bookID = B.bID
+            WHERE CI.userID = ?
+        `, [userid]);
+
+        return cartItems;
+    } catch (error) {
+        console.error("Error retrieving cart items:", error);
         throw error;
     }
 }
 
-export async function deleteOtp(otp) {
-    try {
 
-        const [result] = await pool.query('UPDATE users SET otp = NULL WHERE otp = ?', [otp]);
+export async function deleteItem(userid,bookid){
+    const [item] = await pool.query('DELETE FROM CartItems WHERE userID = ? and bookID', [userid,bookid]);
 
-
-    } catch (error) {
-        console.error('Error in verifyOtp function:', error);
-        throw error;
-    }
+    return true
 }
-
-export async function setVerify(email) {
-    try {
-        const [result] = await pool.query('UPDATE users SET verify = "True" WHERE email = ?', [email]);
-
-    } catch (error) {
-        console.error('Error in updating to verify function:', error);
-        throw error;
-    }
-}
-
-export async function checkVerified(email) {
-    try {
-        const [result] = await pool.query('SELECT verify FROM users WHERE email = ?', [email]);
-
-        // Check if the result exists and if the 'verify' field is truthy (e.g., not null or undefined)
-        return result.length > 0 && result[0].verify;
-
-    } catch (error) {
-        console.error('Error in checkVerified function:', error);
-        throw error;
-    }
-}
-
-
-export async function deleteUnverified(email) {
-    try {
-
-        const [result] = await pool.query('DELETE FROM users WHERE email = ?', [email]);
-
-    } catch (error) {
-        console.error('Error in deleteUnverified function:', error);
-        throw error;
-    }
-}
-
 
 // export async function updateUserData(id, name, email, college, address, dob, mobile) {
 //     try {
@@ -267,22 +366,7 @@ export async function deleteUnverified(email) {
 // }
 
 
-export async function updateUserData(id, name, college, address, dob, mobile) {
-    try {
-        // const hashedPassword = await bcrypt.hash(password, 10);
-        await pool.query(
-            `UPDATE users SET name=?, college=?, address=?, dob=?, mobile=? WHERE userID = ?`,
-            [name, college, address, dob, mobile, id]
-        );
 
-        // Return the updated user data
-        const updatedUser = await getUserByID(id);
-        return { success: true, message: "User Data Updated Successfully", user: updatedUser };
-    } catch (error) {
-        console.error('Error updating user data:', error);
-        throw error;
-    }
-}
 
 
 

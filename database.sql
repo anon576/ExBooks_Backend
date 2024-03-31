@@ -32,3 +32,24 @@ create table address(
     uID integer,
     location varchar(1000)
 );
+
+
+CREATE TABLE orders (
+    orderID INTEGER PRIMARY KEY AUTO_INCREMENT,
+    userID INTEGER,
+    bookID integer,
+    addressID integer,
+    order_date TIMESTAMP NOT NULL DEFAULT NOW(),
+    paymentStatus varchar(20),
+    paymentID varchar(20),  
+    status VARCHAR(20)
+);
+
+
+
+
+CREATE TABLE CartItems (
+    CartItemID INT PRIMARY KEY AUTO_INCREMENT,
+    userID INT NOT NULL,
+    bookID INT NOT NULL
+);

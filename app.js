@@ -452,9 +452,4 @@ app.post('/add_cart_order', async(req,res)=>{
   }
 })
 
-// app.listen(() => {
-//     console.log(`http://192.168.43.192:5000`);
-//   });
-
-// app.listen(5000, '192.168.43.192');
 app.listen(5000, '0.0.0.0');

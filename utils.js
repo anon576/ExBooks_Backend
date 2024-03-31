@@ -1,7 +1,6 @@
 import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
 
-import { getTodaysEnrollledInternship,getInternshipsByID,getUserByID,getTodaysComplateEnrollledInternship} from './database.js'
 dotenv.config()
 
 const admin = process.env.admin
